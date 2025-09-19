@@ -1,7 +1,7 @@
 // src/pages/Builder.jsx
 import { useEffect, useState } from "react";
 import { db } from "../firebase";
-import { collection, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, getDocs} from "firebase/firestore";
 import { useBuilderStore } from "../store/builderStore";
 import SlotBoard from "../components/SlotBoard";
 import Toast from "../components/Toast";
@@ -10,66 +10,66 @@ import Toast from "../components/Toast";
 
 // если в документе коробки есть order:[индексы], используем его.
 // иначе строим порядок по shape/capacity и геометрии.
-function getFillOrder(box) {
-    const n = box?.slotMap?.length || 0;
-    const idx = Array.from({ length: n }, (_, i) => i);
-
-    // Явный порядок из Firestore (если когда-нибудь добавишь)
-    if (Array.isArray(box.order) && box.order.length) {
-        return box.order.filter((i) => i >= 0 && i < n);
-    }
-
-    // Помощники сортировки
-    const byYThenX = (a, b) =>
-        (box.slotMap[a].y - box.slotMap[b].y) || (box.slotMap[a].x - box.slotMap[b].x);
-    const byXThenY = (a, b) =>
-        (box.slotMap[a].x - box.slotMap[b].x) || (box.slotMap[a].y - box.slotMap[b].y);
-
-    // Для круга — по окружности по часовой, старт сверху
-    const byAngleClockwise = (a, b) => {
-        const cx = 0.5, cy = 0.5; // slotMap в нормализованных координатах
-        const ax = box.slotMap[a].x - cx;
-        const ay = box.slotMap[a].y - cy;
-        const bx = box.slotMap[b].x - cx;
-        const by = box.slotMap[b].y - cy;
-        // угол от вертикали вверх (−π/2) по часовой
-        const angA = ((Math.atan2(ay, ax) - (-Math.PI / 2) + 2 * Math.PI) % (2 * Math.PI));
-        const angB = ((Math.atan2(by, bx) - (-Math.PI / 2) + 2 * Math.PI) % (2 * Math.PI));
-        return angA - angB;
-    };
-
-    // «высокая» прямоугольная (высота ≫ ширины) — заполняем СВЕРХУ ВНИЗ
-    const ratio = box?.inner ? box.inner.h / box.inner.w : 1;
-    const isTallRect = box.shape === "rect" && ratio > 1.35;
-
-    // Готовые паттерны:
-    if (box.shape === "round" && (box.capacity === 8 || box.capacity === 12)) {
-        return idx.sort(byAngleClockwise);
-    }
-    if (box.shape === "rect" && isTallRect) {
-        // для твоего «вертикального» бокса на 6: сверху вниз, слева направо
-        return idx.sort(byYThenX);
-    }
-    if (box.shape === "rect" && (box.capacity === 6 || box.capacity === 12)) {
-        // классический прямоугольник: рядами слева направо, сверху вниз
-        return idx.sort(byYThenX);
-    }
-    if (box.shape === "heart" && box.capacity === 12) {
-        // сердце — тоже по рядам сверху вниз (зигзаг необязателен)
-        return idx.sort(byYThenX);
-    }
-
-    // дефолт: по рядам
-    return idx.sort(byYThenX);
-}
+// function getFillOrder(box) {
+//     const n = box?.slotMap?.length || 0;
+//     const idx = Array.from({ length: n }, (_, i) => i);
+//
+//     // Явный порядок из Firestore (если когда-нибудь добавишь)
+//     if (Array.isArray(box.order) && box.order.length) {
+//         return box.order.filter((i) => i >= 0 && i < n);
+//     }
+//
+//     // Помощники сортировки
+//     const byYThenX = (a, b) =>
+//         (box.slotMap[a].y - box.slotMap[b].y) || (box.slotMap[a].x - box.slotMap[b].x);
+//     // const byXThenY = (a, b) =>
+//     //     (box.slotMap[a].x - box.slotMap[b].x) || (box.slotMap[a].y - box.slotMap[b].y);
+//
+//     // Для круга — по окружности по часовой, старт сверху
+//     const byAngleClockwise = (a, b) => {
+//         const cx = 0.5, cy = 0.5; // slotMap в нормализованных координатах
+//         const ax = box.slotMap[a].x - cx;
+//         const ay = box.slotMap[a].y - cy;
+//         const bx = box.slotMap[b].x - cx;
+//         const by = box.slotMap[b].y - cy;
+//         // угол от вертикали вверх (−π/2) по часовой
+//         const angA = ((Math.atan2(ay, ax) - (-Math.PI / 2) + 2 * Math.PI) % (2 * Math.PI));
+//         const angB = ((Math.atan2(by, bx) - (-Math.PI / 2) + 2 * Math.PI) % (2 * Math.PI));
+//         return angA - angB;
+//     };
+//
+//     // «высокая» прямоугольная (высота ≫ ширины) — заполняем СВЕРХУ ВНИЗ
+//     const ratio = box?.inner ? box.inner.h / box.inner.w : 1;
+//     const isTallRect = box.shape === "rect" && ratio > 1.35;
+//
+//     // Готовые паттерны:
+//     if (box.shape === "round" && (box.capacity === 8 || box.capacity === 12)) {
+//         return idx.sort(byAngleClockwise);
+//     }
+//     if (box.shape === "rect" && isTallRect) {
+//         // для твоего «вертикального» бокса на 6: сверху вниз, слева направо
+//         return idx.sort(byYThenX);
+//     }
+//     if (box.shape === "rect" && (box.capacity === 6 || box.capacity === 12)) {
+//         // классический прямоугольник: рядами слева направо, сверху вниз
+//         return idx.sort(byYThenX);
+//     }
+//     if (box.shape === "heart" && box.capacity === 12) {
+//         // сердце — тоже по рядам сверху вниз (зигзаг необязателен)
+//         return idx.sort(byYThenX);
+//     }
+//
+//     // дефолт: по рядам
+//     return idx.sort(byYThenX);
+// }
 
 // выбираем первый свободный слот по рассчитанному порядку
-function chooseNextSlot(box, items) {
-    const used = new Set(items.map((it) => it.slot));
-    const order = getFillOrder(box);
-    const free = order.find((i) => !used.has(i));
-    return free ?? -1;
-}
+// function chooseNextSlot(box, items) {
+//     const used = new Set(items.map((it) => it.slot));
+//     const order = getFillOrder(box);
+//     const free = order.find((i) => !used.has(i));
+//     return free ?? -1;
+// }
 
 export default function Builder() {
     const [boxes, setBoxes] = useState([]);
@@ -109,26 +109,26 @@ export default function Builder() {
         setToast({ message: "Заказ очищен", type: "info" });
     };
 
-    const saveOrder = async (status) => {
-        if (!selectedBox) {
-            setToast({ message: "Сначала выберите коробку", type: "error" });
-            return;
-        }
-        const order = {
-            boxId: selectedBox.id,
-            items: items.map((it) => ({
-                slot: it.slot,
-                macaronId: it.macaronId,
-            })),
-            extras: [],
-            total: calcTotal(),
-            status,
-            createdAt: serverTimestamp(),
-        };
-        const ref = await addDoc(collection(db, "orders"), order);
-        setOrderCreated(ref.id);
-        setToast({ message: "Заказ сохранён", type: "success" });
-    };
+    // const saveOrder = async (status) => {
+    //     if (!selectedBox) {
+    //         setToast({ message: "Сначала выберите коробку", type: "error" });
+    //         return;
+    //     }
+    //     const order = {
+    //         boxId: selectedBox.id,
+    //         items: items.map((it) => ({
+    //             slot: it.slot,
+    //             macaronId: it.macaronId,
+    //         })),
+    //         extras: [],
+    //         total: calcTotal(),
+    //         status,
+    //         createdAt: serverTimestamp(),
+    //     };
+    //     const ref = await addDoc(collection(db, "orders"), order);
+    //     setOrderCreated(ref.id);
+    //     setToast({ message: "Заказ сохранён", type: "success" });
+    // };
 
     // Если заказ создан
     if (orderCreated) {
@@ -204,7 +204,7 @@ export default function Builder() {
                         В наличии
                     </button>
                 </div>
-                <div className="flex space-x-4 overflow-x-auto pb-2">
+                <div className="flex gap-3 overflow-x-auto pb-2">
                     {macarons
                         .filter((m) =>
                             filter === "all"
@@ -218,15 +218,23 @@ export default function Builder() {
                         .map((m) => (
                             <div
                                 key={m.id}
-                                className="relative flex-shrink-0 w-32 h-32 rounded-xl shadow cursor-pointer transition-transform duration-200 hover:scale-105"
+                                className="relative flex-shrink-0 w-28 sm:w-32 border rounded-lg p-2 pb-10 bg-white"
                             >
+                                {/* Фото */}
                                 {m.imageUrl && (
                                     <img
                                         src={m.imageUrl}
                                         alt={m.name}
-                                        className="w-full h-full object-contain rounded-xl"
+                                        className="w-20 h-20 object-contain mx-auto"
                                     />
                                 )}
+
+                                {/* Название — фиксированная высота, чтобы кнопка не сдвигалась */}
+                                <div className="mt-1 text-center text-[12px] sm:text-sm leading-tight min-h-[36px] max-h-[38px] overflow-hidden break-words px-1">
+                                    {m.name}
+                                </div>
+
+                                {/* Кнопка + — закреплена снизу по центру */}
                                 <button
                                     disabled={!m.inStock || !selectedBox}
                                     onClick={() => {
@@ -241,22 +249,24 @@ export default function Builder() {
                                             });
                                             return;
                                         }
-                                        const freeSlot = chooseNextSlot(selectedBox, items);
+                                        const usedSlots = items.map((it) => it.slot);
+                                        const freeSlot = selectedBox.slotMap.findIndex((_, i) => !usedSlots.includes(i));
                                         if (freeSlot >= 0) {
                                             useBuilderStore.getState().addItem(freeSlot, m);
                                             setToast({ message: `Добавлен макарон: ${m.name}`, type: "success" });
                                         }
-
                                     }}
-                                    className={`absolute bottom-1 right-1 px-3 py-1 rounded-full shadow ${
-                                        m.inStock ? "bg-blue-500 text-white" : "bg-gray-300 text-gray-500"
-                                    }`}
+                                    className={`absolute bottom-2 left-1/2 -translate-x-1/2 w-8 h-8 rounded-full 
+            ${m.inStock ? "bg-blue-500 text-white" : "bg-gray-300 text-gray-500"} 
+            disabled:opacity-50 disabled:cursor-not-allowed`}
+                                    aria-label={`Добавить ${m.name}`}
                                 >
                                     +
                                 </button>
                             </div>
                         ))}
                 </div>
+
 
             </div>
 
@@ -291,18 +301,28 @@ export default function Builder() {
                     <button onClick={clearOrder} className="bg-gray-300 px-4 py-2 rounded">
                         Очистить
                     </button>
+
                     <button
-                        onClick={() => saveOrder("draft")}
-                        className="bg-yellow-500 text-white px-4 py-2 rounded"
-                    >
-                        Сохранить как черновик
-                    </button>
-                    <button
-                        onClick={() => saveOrder("paid")}
+                        onClick={() => {
+                            if (!selectedBox) {
+                                setToast({ message: "Сначала выберите коробку", type: "error" });
+                                return;
+                            }
+                            const total = calcTotal();
+                            const macList = items
+                                .map((it, idx) => {
+                                    const m = macarons.find((mm) => mm.id === it.macaronId);
+                                    return `${idx + 1}. ${m ? m.name : "—"}`;
+                                })
+                                .join("%0A"); // перенос строки в WhatsApp
+                            const text = `Новый заказ:%0AКоробка: ${selectedBox.name} (${selectedBox.capacity} шт)%0AМакаронсы:%0A${macList}%0AИтого: ${total} ₸`;
+                            window.open(`https://wa.me/77477605339?text=${text}`, "_blank");
+                        }}
                         className="bg-green-500 text-white px-4 py-2 rounded"
                     >
                         Оформить заказ
                     </button>
+
                 </div>
             </div>
 
